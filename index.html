@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aloe Slot</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: url('casino-bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            text-align: center;
+            color: #fff;
+        }
+
+        #casino-container, #menu-container, #admin-panel, #admin-login, #account-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            display: none;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .neon-text {
+            font-size: 32px;
+            color: #ff0;
+            text-shadow: 0 0 5px #ff0, 0 0 10px #ff0, 0 0 20px #ff8000;
+        }
+
+        #reels {
+            font-size: 48px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff0, #ff8000);
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #ff8000, #ff0);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th, .admin-table td {
+            padding: 10px;
+            border: 1px solid #fff;
+        }
+
+        .admin-table th {
+            background-color: #444;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 18px;
+            border-radius: 5px;
+        }
+
+        #history {
+            margin-top: 20px;
+            color: #ff0;
+            font-size: 18px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 0 auto;
+            width: 80%;
+        }
+
+        #history p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- メニュー画面 -->
+    <div id="menu-container" style="display: block;">
+        <h1 class="neon-text">Aloe Slot</h1>
+        <p>🎰Welcome to Aloe Slot🎰</p>
+	<p>目指せ一攫千金!</p>
+        <button onclick="showAccountCreation()">アカウント作成</button>
+        <button onclick="showPlayerLogin()">プレイ</button>
+        <button onclick="showAdminLogin()">管理者</button>
+    </div>
+
+    <!-- アカウント作成画面 -->
+    <div id="account-container">
+        <h2>アカウント作成</h2>
+        <input type="text" id="username" placeholder="MCID" />
+        <input type="password" id="password" placeholder="パスワード" />
+        <button onclick="createAccount()">アカウント作成</button>
+        <button onclick="showLogin()">戻る</button>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="casino-container">
+        <h1 class="neon-text">豪華カジノスロット</h1>
+        <div id="slot-machine">
+            <div id="reels">
+                <span id="reel1">🍒</span>
+                <span id="reel2">🍋</span>
+                <span id="reel3">🍊</span>
+            </div>
+            <button id="spinButton">スピン</button>
+            <p id="result"></p>
+            <p>トークン: <span id="tokenCount">0</span></p>
+        </div>
+        <div id="history"></div> <!-- 履歴表示エリア -->
+    </div>
+
+    <!-- 管理者ログイン画面 -->
+    <div id="admin-login">
+        <h2>管理者ログイン</h2>
+        <input type="password" id="adminPassword" placeholder="パスワードを入力" />
+        <button onclick="authenticateAdmin()">ログイン</button>
+    </div>
+
+    <!-- 管理者パネル -->
+    <div id="admin-panel">
+        <h2>管理者パネル</h2>
+        <div id="admin-actions" style="display: block;">
+            <h3>プレイヤーのトークン管理</h3>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ユーザー名</th>
+                        <th>トークン数</th>
+                        <th>トークン追加</th>
+                        <th>削除</th>
+                    </tr>
+                </thead>
+                <tbody id="playerList"></tbody>
+            </table>
+            <button onclick="goHome()">ホームに戻る</button> <!-- ホームに戻るボタン -->
+        </div>
+    </div>
+
+    <script>
+        let currentUsername = '';
+        let tokens = 0;
+
+        // シンボルの定義
+        const symbols = ['🍒', '🍋', '🍊', '🍉', '🍇', '⭐'];
+
+        // 各シンボルの確率設定（合計が1になるように設定してください）
+        const probabilities = {
+            '🍒': 0.4,  // チェリー
+            '🍋': 0.3,  // レモン
+            '🍊': 0.2,  // オレンジ
+            '🍉': 0.1,  // スイカ
+            '🍇': 0.05, // グレープ
+            '⭐': 0.05   // 星
+        };
+
+        // 各シンボルの配当設定
+        const payouts = {
+            '🍒': 10,  // チェリー
+            '🍋': 20,  // レモン
+            '🍊': 30,  // オレンジ
+            '🍉': 40,  // スイカ
+            '🍇': 50,  // グレープ
+            '⭐': 100  // 星
+        };
+
+        // スロット結果履歴用の配列
+        let history = [];
+
+        // 確率に基づいてシンボルを選択する関数
+        function getRandomSymbol() {
+            const rand = Math.random();
+            let cumulativeProbability = 0;
+            
+            for (let symbol in probabilities) {
+                cumulativeProbability += probabilities[symbol];
+                if (rand < cumulativeProbability) {
+                    return symbol;
+                }
+            }
+            return '🍒';  // デフォルトは🍒
+        }
+
+        // スピン機能
+        function spin() {
+    if (tokens <= 0) {
+        document.getElementById('result').textContent = "トークンが足りません！";
+        return;
+    }
+
+    let reel1 = getRandomSymbol();
+    let reel2 = getRandomSymbol();
+    let reel3 = getRandomSymbol();
+
+    // スピン結果の初期表示
+    document.getElementById('reel1').textContent = reel1;
+    document.getElementById('reel2').textContent = reel2;
+    document.getElementById('reel3').textContent = reel3;
+
+    tokens -= 10; // 1回のスピンで10トークン消費
+    document.getElementById('tokenCount').textContent = tokens;
+
+    // 当たりの判定
+    let resultMessage = "ハズレ！";
+    if (reel1 === reel2 && reel2 === reel3) {
+        // 当たった場合はシンボルを揃える
+        resultMessage = `${reel1} 大当たり！ +${payouts[reel1]}トークン`;
+        tokens += payouts[reel1]; // 3つ揃ったシンボルの配当を追加
+    } else {
+        // ハズレの場合はランダムにシンボルを表示させ、揃わないようにする
+        while (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
+            // 揃わないようにランダムに再生成
+            reel1 = getRandomSymbol();
+            reel2 = getRandomSymbol();
+            reel3 = getRandomSymbol();
+        }
+    }
+
+    document.getElementById('result').textContent = resultMessage;
+
+    // 結果履歴の更新
+    const historyItem = `${reel1} | ${reel2} | ${reel3} - ${resultMessage}`;
+    history.unshift(historyItem); // 最新結果を配列の先頭に追加
+
+    if (history.length > 10) {
+        history.pop(); // 履歴が10を超えたら一番古い結果を削除
+    }
+
+    // 履歴を即座に表示
+    setTimeout(displayHistory, 100); // 少し遅延を入れて履歴を更新
+
+    // トークンをローカルストレージに保存
+    let userData = JSON.parse(localStorage.getItem(currentUsername));
+    userData.tokens = tokens;
+    localStorage.setItem(currentUsername, JSON.stringify(userData));
+}
+
+function displayHistory() {
+    const historyElement = document.getElementById('history');
+    historyElement.innerHTML = ''; // まず履歴エリアをクリア
+
+    history.forEach((entry) => {
+        const historyItem = document.createElement('p');
+        historyItem.textContent = entry;
+        historyElement.appendChild(historyItem);
+    });
+}
+
+        document.getElementById('spinButton').addEventListener('click', spin);
+
+        // 管理者ログイン画面表示
+        function showAdminLogin() {
+            document.getElementById('menu-container').style.display = 'none';
+            document.getElementById('admin-login').style.display = 'block';
+        }
+
+        // 管理者認証
+        function authenticateAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                displayPlayerList();
+            } else {
+                alert("パスワードが間違っています！");
+            }
+        }
+
+        // プレイヤーリストを表示
+        function displayPlayerList() {
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const username = localStorage.key(i);
+                if (username !== 'admin123') {
+                    const playerData = JSON.parse(localStorage.getItem(username));
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${playerData.username}</td>
+                        <td>${playerData.tokens}</td>
+                        <td><button onclick="addTokens('${username}')">トークン追加</button></td>
+                        <td><button onclick="deletePlayer('${username}')">削除</button></td>
+                    `;
+                    playerList.appendChild(row);
+                }
+            }
+        }
+
+        // トークンを追加
+        function addTokens(username) {
+            const amount = prompt('追加するトークン数を入力');
+            if (amount && !isNaN(amount)) {
+                const playerData = JSON.parse(localStorage.getItem(username));
+                playerData.tokens += parseInt(amount);
+                localStorage.setItem(username, JSON.stringify(playerData));
+                displayPlayerList(); // 更新されたプレイヤーリストを再表示
+            }
+        }
+
+        // プレイヤーを削除
+        function deletePlayer(username) {
+            if (confirm(`本当に${username}を削除しますか？`)) {
+                localStorage.removeItem(username);
+                displayPlayerList(); // 更新されたプレイヤーリストを再表示
+            }
+        }
+
+        // ホームに戻る
+        function goHome() {
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('menu-container').style.display = 'block';
+        }
+
+ 	// プレイヤーのログイン
+        function showPlayerLogin() {
+            const username = prompt("ユーザー名を入力してください");
+            const password = prompt("パスワードを入力してください");
+
+            if (username && localStorage.getItem(username)) {
+                const userData = JSON.parse(localStorage.getItem(username));
+                if (userData.password === password) {
+                    currentUsername = username;
+                    tokens = userData.tokens;
+                    document.getElementById('tokenCount').textContent = tokens;
+                    document.getElementById('menu-container').style.display = 'none';
+                    document.getElementById('casino-container').style.display = 'block';
+                } else {
+                    alert("パスワードが間違っています！");
+                }
+            } else {
+                alert("ユーザーが存在しません。");
+            }
+        }
+
+        // アカウント作成画面を表示
+        function showAccountCreation() {
+            document.getElementById('menu-container').style.display = 'none';
+            document.getElementById('account-container').style.display = 'block';
+        }
+
+        // アカウント作成処理
+        function createAccount() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username && password) {
+                const playerData = { username, password, tokens: 100 };
+                localStorage.setItem(username, JSON.stringify(playerData));
+                alert('アカウント作成完了！');
+                showLogin();
+            } else {
+                alert('ユーザー名とパスワードを入力してください');
+            }
+        }
+
+        // ログイン画面を表示
+        function showLogin() {
+            document.getElementById('account-container').style.display = 'none';
+            document.getElementById('menu-container').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
