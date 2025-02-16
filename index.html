@@ -94,7 +94,7 @@
     <div id="menu-container" style="display: block;">
         <h1 class="neon-text">Aloe Slot</h1>
         <p>🎰Welcome to Aloe Slot🎰</p>
-	<p>目指せ一攫千金!</p>
+        <p>目指せ一攫千金!</p>
         <button onclick="showAccountCreation()">アカウント作成</button>
         <button onclick="showPlayerLogin()">プレイ</button>
         <button onclick="showAdminLogin()">管理者</button>
@@ -182,11 +182,50 @@
         // スロット結果履歴用の配列
         let history = [];
 
+        // Cookieを設定する関数
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000)); // 有効期限を設定
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        // Cookieから値を取得する関数
+        function getCookie(name) {
+            const nameEq = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1, c.length);
+                }
+                if (c.indexOf(nameEq) == 0) {
+                    return c.substring(nameEq.length, c.length);
+                }
+            }
+            return null;
+        }
+
+        // トークン数を保存する関数
+        function saveTokensToCookie() {
+            setCookie(currentUsername + '_tokens', tokens, 7); // 7日間有効
+        }
+
+        // トークン数を読み込む関数
+        function loadTokensFromCookie() {
+            const cookieValue = getCookie(currentUsername + '_tokens');
+            if (cookieValue !== null) {
+                tokens = parseInt(cookieValue);
+                document.getElementById('tokenCount').textContent = tokens;
+            } else {
+                tokens = 0; // Cookieがない場合は初期値0
+            }
+        }
+
         // 確率に基づいてシンボルを選択する関数
         function getRandomSymbol() {
             const rand = Math.random();
             let cumulativeProbability = 0;
-            
+
             for (let symbol in probabilities) {
                 cumulativeProbability += probabilities[symbol];
                 if (rand < cumulativeProbability) {
@@ -198,136 +237,48 @@
 
         // スピン機能
         function spin() {
-    if (tokens <= 0) {
-        document.getElementById('result').textContent = "トークンが足りません！";
-        return;
-    }
-
-    let reel1 = getRandomSymbol();
-    let reel2 = getRandomSymbol();
-    let reel3 = getRandomSymbol();
-
-    // スピン結果の初期表示
-    document.getElementById('reel1').textContent = reel1;
-    document.getElementById('reel2').textContent = reel2;
-    document.getElementById('reel3').textContent = reel3;
-
-    tokens -= 10; // 1回のスピンで10トークン消費
-    document.getElementById('tokenCount').textContent = tokens;
-
-    // 当たりの判定
-    let resultMessage = "ハズレ！";
-    if (reel1 === reel2 && reel2 === reel3) {
-        // 当たった場合はシンボルを揃える
-        resultMessage = `${reel1} 大当たり！ +${payouts[reel1]}トークン`;
-        tokens += payouts[reel1]; // 3つ揃ったシンボルの配当を追加
-    } else {
-        // ハズレの場合はランダムにシンボルを表示させ、揃わないようにする
-        while (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
-            // 揃わないようにランダムに再生成
-            reel1 = getRandomSymbol();
-            reel2 = getRandomSymbol();
-            reel3 = getRandomSymbol();
-        }
-    }
-
-    document.getElementById('result').textContent = resultMessage;
-
-    // 結果履歴の更新
-    const historyItem = `${reel1} | ${reel2} | ${reel3} - ${resultMessage}`;
-    history.unshift(historyItem); // 最新結果を配列の先頭に追加
-
-    if (history.length > 10) {
-        history.pop(); // 履歴が10を超えたら一番古い結果を削除
-    }
-
-    // 履歴を即座に表示
-    setTimeout(displayHistory, 100); // 少し遅延を入れて履歴を更新
-
-    // トークンをローカルストレージに保存
-    let userData = JSON.parse(localStorage.getItem(currentUsername));
-    userData.tokens = tokens;
-    localStorage.setItem(currentUsername, JSON.stringify(userData));
-}
-
-function displayHistory() {
-    const historyElement = document.getElementById('history');
-    historyElement.innerHTML = ''; // まず履歴エリアをクリア
-
-    history.forEach((entry) => {
-        const historyItem = document.createElement('p');
-        historyItem.textContent = entry;
-        historyElement.appendChild(historyItem);
-    });
-}
-
-        document.getElementById('spinButton').addEventListener('click', spin);
-
-        // 管理者ログイン画面表示
-        function showAdminLogin() {
-            document.getElementById('menu-container').style.display = 'none';
-            document.getElementById('admin-login').style.display = 'block';
-        }
-
-        // 管理者認証
-        function authenticateAdmin() {
-            const password = document.getElementById('adminPassword').value;
-            if (password === 'admin123') {
-                document.getElementById('admin-login').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                displayPlayerList();
-            } else {
-                alert("パスワードが間違っています！");
+            if (tokens <= 0) {
+                document.getElementById('result').textContent = "トークンが足りません！";
+                return;
             }
-        }
 
-        // プレイヤーリストを表示
-        function displayPlayerList() {
-            const playerList = document.getElementById('playerList');
-            playerList.innerHTML = '';
+            let reel1 = getRandomSymbol();
+            let reel2 = getRandomSymbol();
+            let reel3 = getRandomSymbol();
 
-            for (let i = 0; i < localStorage.length; i++) {
-                const username = localStorage.key(i);
-                if (username !== 'admin123') {
-                    const playerData = JSON.parse(localStorage.getItem(username));
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${playerData.username}</td>
-                        <td>${playerData.tokens}</td>
-                        <td><button onclick="addTokens('${username}')">トークン追加</button></td>
-                        <td><button onclick="deletePlayer('${username}')">削除</button></td>
-                    `;
-                    playerList.appendChild(row);
-                }
+            // スピン結果の初期表示
+            document.getElementById('reel1').textContent = reel1;
+            document.getElementById('reel2').textContent = reel2;
+            document.getElementById('reel3').textContent = reel3;
+
+            tokens -= 10; // 1回のスピンで10トークン消費
+            document.getElementById('tokenCount').textContent = tokens;
+
+            // 当たりの判定
+            let resultMessage = "ハズレ！";
+            if (reel1 === reel2 && reel2 === reel3) {
+                // 当たった場合はシンボルを揃える
+                resultMessage = `${reel1} 大当たり！ +${payouts[reel1]}トークン`;
+                tokens += payouts[reel1]; // 3つ揃ったシンボルの配当を追加
             }
-        }
 
-        // トークンを追加
-        function addTokens(username) {
-            const amount = prompt('追加するトークン数を入力');
-            if (amount && !isNaN(amount)) {
-                const playerData = JSON.parse(localStorage.getItem(username));
-                playerData.tokens += parseInt(amount);
-                localStorage.setItem(username, JSON.stringify(playerData));
-                displayPlayerList(); // 更新されたプレイヤーリストを再表示
+            document.getElementById('result').textContent = resultMessage;
+
+            // トークンをCookieに保存
+            saveTokensToCookie();
+
+            // 結果履歴を更新
+            const historyItem = `${reel1} | ${reel2} | ${reel3} - ${resultMessage}`;
+            history.unshift(historyItem); // 最新結果を配列の先頭に追加
+
+            if (history.length > 10) {
+                history.pop(); // 履歴が10を超えたら一番古い結果を削除
             }
+
+            setTimeout(displayHistory, 100); // 少し遅延を入れて履歴を更新
         }
 
-        // プレイヤーを削除
-        function deletePlayer(username) {
-            if (confirm(`本当に${username}を削除しますか？`)) {
-                localStorage.removeItem(username);
-                displayPlayerList(); // 更新されたプレイヤーリストを再表示
-            }
-        }
-
-        // ホームに戻る
-        function goHome() {
-            document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('menu-container').style.display = 'block';
-        }
-
- 	// プレイヤーのログイン
+        // ログイン時にトークンをCookieから読み込む
         function showPlayerLogin() {
             const username = prompt("ユーザー名を入力してください");
             const password = prompt("パスワードを入力してください");
@@ -336,8 +287,7 @@ function displayHistory() {
                 const userData = JSON.parse(localStorage.getItem(username));
                 if (userData.password === password) {
                     currentUsername = username;
-                    tokens = userData.tokens;
-                    document.getElementById('tokenCount').textContent = tokens;
+                    loadTokensFromCookie(); // Cookieからトークンを読み込む
                     document.getElementById('menu-container').style.display = 'none';
                     document.getElementById('casino-container').style.display = 'block';
                 } else {
@@ -348,31 +298,7 @@ function displayHistory() {
             }
         }
 
-        // アカウント作成画面を表示
-        function showAccountCreation() {
-            document.getElementById('menu-container').style.display = 'none';
-            document.getElementById('account-container').style.display = 'block';
-        }
-
-        // アカウント作成処理
-        function createAccount() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username && password) {
-                const playerData = { username, password, tokens: 100 };
-                localStorage.setItem(username, JSON.stringify(playerData));
-                alert('アカウント作成完了！');
-                showLogin();
-            } else {
-                alert('ユーザー名とパスワードを入力してください');
-            }
-        }
-
-        // ログイン画面を表示
-        function showLogin() {
-            document.getElementById('account-container').style.display = 'none';
-            document.getElementById('menu-container').style.display = 'block';
-        }
+        // ここから管理者のコードを追加していく
     </script>
 </body>
 </html>
