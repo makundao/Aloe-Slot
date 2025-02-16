@@ -152,58 +152,6 @@
         </div>
     </div>
 
- <script>
-        function setCookie(name, value, days) {
-            let date = new Date();
-            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-            document.cookie = name + "=" + JSON.stringify(value) + ";expires=" + date.toUTCString() + ";path=/";
-        }
-
-        function getCookie(name) {
-            let cookies = document.cookie.split('; ');
-            for (let cookie of cookies) {
-                let [key, value] = cookie.split('=');
-                if (key === name) {
-                    return JSON.parse(value);
-                }
-            }
-            return null;
-        }
-
-        function deleteCookie(name) {
-            document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        }
-
-        function createAccount() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username && password) {
-                const playerData = { username, password, tokens: 100 };
-                setCookie(username, playerData, 7);
-                alert('アカウント作成完了！');
-                showLogin();
-            } else {
-                alert('ユーザー名とパスワードを入力してください');
-            }
-        }
-
-        function showPlayerLogin() {
-            const username = prompt("ユーザー名を入力してください");
-            const password = prompt("パスワードを入力してください");
-            const userData = getCookie(username);
-
-            if (userData && userData.password === password) {
-                currentUsername = username;
-                tokens = userData.tokens;
-                document.getElementById('tokenCount').textContent = tokens;
-                document.getElementById('menu-container').style.display = 'none';
-                document.getElementById('casino-container').style.display = 'block';
-            } else {
-                alert("ユーザーが存在しないか、パスワードが間違っています。");
-            }
-        }
-    </script>
-
     <script>
         let currentUsername = '';
         let tokens = 0;
